@@ -130,7 +130,35 @@ def send_telegram(msg):
 
 def is_opa(text):
     text = text.lower()
-    return any(k.lower() in text for k in KEYWORDS)
+    
+    # Excluir frases comunes de "mercado sin cambios" o placeholders
+    exclude_patterns = [
+        "thesaurus financial markets remain unchanged",
+        "mercados financieros permanecen inalterados",
+        "mercados sin cambios",
+        "remain unchanged",
+        "permanecen inalterados",
+        "sin variación", "sin cambios significativos"
+    ]
+    
+    if any(pattern in text for pattern in exclude_patterns):
+        return False
+    
+    # Solo aceptar si hay al menos una keyword FUERTE (evita coincidencias débiles)
+    strong_keywords = [
+        "opa", 
+        "oferta pública de adquisición", 
+        "oferta publica de adquisicion",
+        "tender offer", 
+        "takeover bid", 
+        "mandatory offer", 
+        "offre publique d'achat", 
+        "offerta pubblica di acquisto", 
+        "übernahmeangebot",
+        # Puedes añadir más de tu lista original si quieres
+    ]
+    
+    return any(k.lower() in text for k in strong_keywords)
 
 def check_rss():
     seen = load_seen()
