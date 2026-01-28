@@ -5,8 +5,8 @@ import json
 import os
 from datetime import datetime
 
-BOT_TOKEN = os.environ["8513075677:AAEd5qkb1nx9wYnPf5ecaO31pJXFBiuNXRs"]
-CHAT_ID = os.environ["1125679152"]
+BOT_TOKEN = os.environ[8513075677:AAEd5qkb1nx9wYnPf5ecaO31pJXFBiuNXRs]
+CHAT_ID = os.environ[1125679152]
 
 DB_FILE = "seen.json"
 
