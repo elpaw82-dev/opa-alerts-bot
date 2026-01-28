@@ -6,8 +6,8 @@ import os
 from datetime import datetime
 
 # Cargar desde variables de entorno (configúralas en GitHub Secrets o en tu entorno local)
-BOT_TOKEN = os.environ.get('8513075677:AAEd5qkb1nx9wYnPf5ecaO31pJXFBiuNXRs')
-CHAT_ID = os.environ.get('1125679152')
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
+CHAT_ID = os.environ.get('CHAT_ID')
 DB_FILE = "seen.json"
 
 # Palabras clave expandidas para OPA/ofertas de adquisición en toda Europa (insensible a mayúsculas)
