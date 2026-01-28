@@ -2,24 +2,24 @@ name: OPA Alerts
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
-  workflow_dispatch:
+    - cron: '*/30 * * * *'  # Se ejecuta cada 30 minutos
+  workflow_dispatch:  # Permite activación manual
 
 jobs:
-  run-bot:
+  check-feeds:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-
+          python-version: '3.12'
       - name: Install dependencies
         run: |
-          pip install requests feedparser beautifulsoup4
-
-      - name: Run bot
-        run: |
-          python opa_bot.py
+          python -m pip install --upgrade pip
+          pip install requests feedparser
+      - name: Run OPA alert script
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python opa_alert.py
