@@ -10,27 +10,96 @@ BOT_TOKEN = os.environ.get('8513075677:AAEd5qkb1nx9wYnPf5ecaO31pJXFBiuNXRs')
 CHAT_ID = os.environ.get('1125679152')
 DB_FILE = "seen.json"
 
-# Palabras clave expandidas para OPA/ofertas de adquisición (insensible a mayúsculas)
+# Palabras clave expandidas para OPA/ofertas de adquisición en toda Europa (insensible a mayúsculas)
 KEYWORDS = [
+    # Español (originales + variaciones)
     "opa",
     "oferta pública de adquisición",
     "oferta publica de adquisicion",
+    "oferta de exclusión",
+    
+    # Inglés (originales + comunes en UE/UK)
     "tender offer",
     "takeover",
+    "takeover bid",
+    "public takeover",
     "cash offer",
     "voluntary offer",
-    "oferta de exclusión",
-    "squeeze-out"
+    "mandatory offer",
+    "squeeze-out",
+    
+    # Francés (Francia, Bélgica, Luxemburgo)
+    "offre publique d'achat",
+    "offre publique obligatoire",
+    "opa obligatoire",
+    
+    # Italiano (Italia)
+    "offerta pubblica di acquisto",
+    "opa obbligatoria",
+    
+    # Alemán (Alemania, Austria)
+    "übernahmeangebot",
+    "pflichtangebot",
+    "öffentliches übernahmeangebot",
+    
+    # Neerlandés (Países Bajos, Bélgica)
+    "openbaar bod",
+    "openbaar overnamebod",
+    "verplicht bod",
+    
+    # Sueco (Suecia)
+    "offentligt uppköpserbjudande",
+    "obligatoriskt bud",
+    
+    # Portugués (Portugal)
+    "oferta pública de aquisição",  # Similar al español, pero con acentos
+    "opa obrigatória",
+    
+    # Polaco (Polonia)
+    "publiczna oferta przejęcia",
+    "obowiązkowa oferta",
+    
+    # Otros comunes en UE (griego, danés, etc., pero prioricé mayoritarios)
+    "offentlig overtagelsestilbud",  # Danés
+    "julkisen ostotarjouksen"       # Finlandés (parcial)
 ]
 
-# Feeds RSS relevantes (enfocados en España/Europa financiera y noticias)
+# Feeds RSS relevantes (enfocados en toda Europa: reguladores, bolsas y noticias financieras)
 RSS_FEEDS = [
-    "https://www.cnmv.es/portal/RSS/RssHandler.ashx?fac=HECHOSRELEV",  # CNMV España (clave para OPAs oficiales)
+    # España (originales)
+    "https://www.cnmv.es/portal/RSS/RssHandler.ashx?fac=HECHOSRELEV",  # CNMV (OPAs oficiales)
     "https://www.bolsamadrid.es/rss/RSS.ashx?feed=Todo",  # Bolsa de Madrid
-    "https://www.expansion.com/rss/mercados.xml",  # Expansion (España)
-    "https://www.amf-france.org/en/rss",  # AMF Francia (mantenido del original)
-    "https://www.consob.it/web/consob-and-its-activities/rss",  # CONSOB Italia (para cobertura EU más amplia)
-    "https://www.cincodias.com/rss/mercados",  # Cinco Días (noticias financieras España)
+    "https://www.expansion.com/rss/mercados.xml",  # Expansion
+    "https://www.cincodias.com/rss/mercados",  # Cinco Días
+    
+    # Francia (original)
+    "https://www.amf-france.org/en/rss",  # AMF
+    
+    # Italia (original)
+    "https://www.consob.it/web/consob-and-its-activities/rss",  # CONSOB
+    
+    # UK
+    "https://www.fca.org.uk/rss/news",  # FCA (noticias y anuncios de mercados)
+    
+    # Alemania
+    "https://www.bafin.de/EN/Service/RSS/rss_artikel_en.html",  # BaFin (noticias y supervisión)
+    
+    # Países Bajos
+    "https://www.afm.nl/en/rss",  # AFM (noticias financieras)
+    
+    # Suecia
+    "https://www.fi.se/en/rss/",  # Finansinspektionen (FI, noticias y anuncios)
+    
+    # Portugal
+    "https://www.cmvm.pt/en/rss",  # CMVM (alertas y noticias)
+    
+    # Polonia
+    "https://www.knf.gov.pl/en/rss",  # KNF (noticias regulatorias)
+    
+    # Paneuropeos
+    "https://www.ecb.europa.eu/home/html/rss.en.html",  # ECB (Banco Central Europeo, incluye finanzas)
+    "https://www.esma.europa.eu/rss",  # ESMA (Autoridad Europea de Valores, clave para OPAs UE)
+    "https://www.euronext.com/en/rss",  # Euronext (bolsas en varios países: Francia, Países Bajos, etc.)
 ]
 
 def load_seen():
