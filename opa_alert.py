@@ -35,9 +35,61 @@ SECONDARY_KEYWORDS = [
 
 # Frases a excluir (falsos positivos)
 EXCLUDE_PATTERNS = [
+    # Originales en inglés / generales
     "remain vulnerable", "treacherous calm", "trendzicht", "trend monitor", "trend monitor 2026",
-    "financial markets remain", "mercados financieros permanecen", "permanecen inalterados",
-    "markets remain", "vulnerable", "geopolitical tensions", "hyper-personalisation"
+    "financial markets remain", "markets remain", "vulnerable", "geopolitical tensions", "hyper-personalisation",
+    
+    # Español (muy común en CNMV, BME, Expansión, Cinco Días, El Economista)
+    "recompra de acciones",
+    "programa de recompra",
+    "programas de recompra",
+    "recompra de acciones propias",
+    "autocartera",
+    "ampliación del programa de recompra",
+    "ejecución de recompra",
+    "comunicación de recompra",
+    "recompra y amortización",
+    "reducción de capital mediante recompra",
+    "operaciones de autocartera",
+    "compra de acciones propias",
+    
+    # Inglés (Financial Times, Investing.com, Euronext, etc.)
+    "share buyback",
+    "share repurchase",
+    "stock buyback",
+    "share repurchase program",
+    "buyback program",
+    "repurchase of shares",
+    "own shares purchase",
+    "treasury shares",
+    
+    # Francés (Les Echos, AMF, Euronext Francia)
+    "rachat d'actions",
+    "programme de rachat d'actions",
+    "rachats d'actions",
+    "autocontrôle",
+    "actions propres",
+    "programme de rachat",
+    
+    # Italiano (Il Sole 24 Ore, CONSOB)
+    "riacquisto azioni",
+    "programma di riacquisto azioni",
+    "autoconservazione",
+    "azioni proprie",
+    "buyback azionario",
+    "programma di buyback",
+    
+    # Alemán (Handelsblatt, BaFin)
+    "aktienrückkauf",
+    "rückkaufprogramm",
+    "aktienrückkaufprogramm",
+    "eigenbestandsaktien",
+    "rückkauf von aktien",
+    "aktienrückkaufprogramm",
+    
+    # Otras exclusiones útiles (boletines, ruido común)
+    "boletin diario", "boletín diario", "mtf equity", "clehrp", "indexa capital", "estructuras",
+    "dividendo", "ampliación de capital", "resultados trimestrales", "situación financiera"
 ]
 
 # Lista ampliada de RSS feeds (España + Europa + globales con foco mercados)
