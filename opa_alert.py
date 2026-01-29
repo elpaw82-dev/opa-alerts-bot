@@ -166,36 +166,37 @@ def check_oir_page():
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
         
-        # Selector amplio: busca párrafos o elementos que contengan hora + enlaces
-        # Ajusta según inspección real (DevTools → inspecciona un anuncio)
-        announcements = soup.select("p, div.content p, .fecha + p")  # prueba estos
+        # Buscamos los <li> dentro de la lista de anuncios
+        items = soup.select("ul li")  # o más específico: "div.oir-list ul li" si ves la clase
         
-        seen = load_seen()  # recargamos por si rss ya añadió
+        seen = load_seen()
         
-        for item in announcements[:15]:  # limitamos a últimos ~15 para eficiencia
-            text = item.get_text(strip=True, separator=" ")
-            if not text or len(text) < 30: continue
+        today = datetime.now().strftime('%d/%m/%Y')  # para filtrar solo hoy, pero opcional
+        
+        for item in items[:15]:  # últimos 15 para cubrir cierre anterior
+            # Extraer hora
+            hora_tag = item.find("span", class_="hora")
+            hora = hora_tag.get_text(strip=True) if hora_tag else "??:??"
             
-            # Intentamos extraer hora, emisor, título
-            hora_match = re.search(r'(\d{2}:\d{2})', text)
-            hora = hora_match.group(1) if hora_match else "??:??"
+            # Emisor (primer <a class="emisor">)
+            emisor_tag = item.find("a", class_="emisor")
+            emisor = emisor_tag.get_text(strip=True).strip("[]") if emisor_tag else ""
             
-            links = item.find_all("a")
-            emisor = ""
-            titulo = ""
-            link = ""
+            # Tipo / título genérico
+            tipo_tag = item.find("span", class_="tipo")
+            tipo = tipo_tag.get_text(strip=True) if tipo_tag else ""
             
-            if len(links) >= 1:
-                emisor = links[0].get_text(strip=True)
-            if len(links) >= 2:
-                titulo = links[1].get_text(strip=True)
-                link = links[1].get("href", "")
-                if link and not link.startswith("http"):
-                    link = "https://www.cnmv.es" + link
+            # Detalle / texto real (segundo <a class="detalle">)
+            detalle_tag = item.find("a", class_="detalle")
+            titulo = detalle_tag.get_text(strip=True).strip("[]") if detalle_tag else ""
+            link = detalle_tag["href"] if detalle_tag and "href" in detalle_tag.attrs else ""
+            if link and not link.startswith("http"):
+                link = "https://www.cnmv.es" + link
             
-            combined_text = f"{hora} {emisor} {titulo}"
+            combined_text = f"{hora} {emisor} {tipo} {titulo}"
+            if len(combined_text.strip()) < 20: continue
+            
             uid = hashlib.md5((link + titulo).encode('utf-8')).hexdigest()
-            
             if uid in seen: continue
             
             is_detected, is_suspect = is_opa(combined_text)
@@ -203,16 +204,18 @@ def check_oir_page():
                 msg = (
                     f"**Hora:** {hora}\n"
                     f"**Emisor:** {emisor}\n"
-                    f"**Título:** {titulo}\n"
+                    f"**Tipo:** {tipo}\n"
+                    f"**Título/Detalle:** {titulo}\n"
                     f"**Fuente:** CNMV OIR\n"
                     f"**Alerta:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
                     f"[Ver documento]({link})"
                 )
                 send_telegram(msg, is_suspect)
                 seen.add(uid)
+                print(f"Detectado y enviado: {titulo[:80]}...")
         
         save_seen(seen)
-        print("Scraping OIR completado.")
+        print("Scraping OIR completado. Items procesados:", len(items))
     except Exception as e:
         print(f"Error scraping OIR: {e}")
 
