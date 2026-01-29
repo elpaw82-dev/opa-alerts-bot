@@ -40,6 +40,12 @@ EXCLUDE_PATTERNS = [
     "markets remain", "vulnerable", "geopolitical tensions", "hyper-personalisation"
 ]
 
+# Añade exclusiones más fuertes para recompras y boletines
+EXCLUDE_PATTERNS.extend([
+    "recompra de acciones", "autocartera", "programas de recompra", "boletin diario",
+    "boletín diario", "mtf equity", "estructuras"  # opcional, para los que viste
+]
+                        
 # Lista ampliada de RSS feeds (España + Europa + globales con foco mercados)
 RSS_FEEDS = [
     # España - CNMV (el más importante para OPAs oficiales)
