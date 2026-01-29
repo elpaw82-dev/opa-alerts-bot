@@ -232,6 +232,96 @@ def check_rss():
 
 # ... (aquí mantén tu función check_oir_page() actualizada con la versión robusta que te di antes, la de líneas con regex para markdown)
 
+def check_oir_page():
+    url = "https://www.cnmv.es/portal/otra-informacion-relevante/aldia-oir?lang=es"
+    headers = {"User-Agent": "OPA-Bot/1.0"}
+    
+    try:
+        resp = requests.get(url, headers=headers, timeout=15)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        
+        text_content = soup.get_text(separator="\n", strip=True)
+        lines = [line.strip() for line in text_content.split("\n") if line.strip()]
+        
+        seen = load_seen()
+        i = 0
+        current_date = ""
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            # Fecha header
+            date_match = re.match(r'^##?\s*(\d{2}/\d{2}/\d{4}.*)', line)
+            if date_match:
+                current_date = date_match.group(1).strip()
+                i += 1
+                continue
+            
+            # Timestamp line: * * HH:MM or + * HH:MM
+            hora_match = re.match(r'^[\*\+]\s*[\*\+]\s*(\d{2}:\d{2})', line)
+            if hora_match:
+                hora = hora_match.group(1)
+                
+                # Issuer line
+                i += 1
+                if i >= len(lines): break
+                emisor_line = lines[i]
+                emisor_match = re.search(r'[\*\+]\s*\[([^\]]+)\]', emisor_line)
+                emisor = emisor_match.group(1).strip() if emisor_match else ""
+                
+                # Type line
+                i += 1
+                if i >= len(lines): break
+                tipo_line = lines[i]
+                tipo_match = re.search(r'^[\*\+]\s*(.+)', tipo_line)
+                tipo = tipo_match.group(1).strip() if tipo_match else ""
+                
+                # Detail line with link
+                i += 1
+                if i >= len(lines): break
+                detalle_line = lines[i]
+                titulo_match = re.search(r'[\*\+]\s*\[([^\]]+)\]', detalle_line)
+                titulo = titulo_match.group(1).strip() if titulo_match else ""
+                
+                link_match = re.search(r'\(([^)]+)\)', detalle_line)
+                link = link_match.group(1) if link_match else ""
+                if link and not link.startswith('http'):
+                    link = "https://www.cnmv.es" + link
+                
+                combined_text = f"{current_date} {hora} {emisor} {tipo} {titulo}".lower()
+                if len(combined_text) < 40 or not hora:
+                    i += 1
+                    continue
+                
+                uid = hashlib.md5((link + titulo).encode('utf-8')).hexdigest()
+                if uid in seen:
+                    i += 1
+                    continue
+                
+                if is_opa(combined_text):
+                    msg = (
+                        f"**Fecha:** {current_date}\n"
+                        f"**Hora:** {hora}\n"
+                        f"**Emisor:** {emisor}\n"
+                        f"**Tipo:** {tipo}\n"
+                        f"**Detalle:** {titulo}\n"
+                        f"**Fuente:** CNMV OIR página\n\n"
+                        f"[Ver]({link})"
+                    )
+                    send_telegram(msg)
+                    seen.add(uid)
+                
+                i += 1
+                continue
+            
+            i += 1
+        
+        save_seen(seen)
+        print("Scraping OIR completado.")
+    except Exception as e:
+        print(f"Error scraping OIR: {e}")
+        
 if __name__ == "__main__":
     print("Iniciando chequeo completo...")
     alerts_rss, _ = check_rss()
