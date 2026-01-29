@@ -24,28 +24,51 @@ STRONG_KEYWORDS = [
     "offentligt uppköpserbjudande", "obligatoriskt bud",
     "oferta pública de aquisição", "opa obrigatória",
     "publiczna oferta przejęcia", "obowiązkowa oferta",
-    "opa obligatoria", "obligatoria sobre",  # Añadidas específicas CNMV
+    "opa obligatoria", "obligatoria sobre",  # Específicas CNMV
 ]
 
-# Keywords secundarias (títulos genéricos de CNMV)
+# Keywords secundarias (títulos genéricos)
 SECONDARY_KEYWORDS = [
     "ofertas públicas de adquisición", "oferta pública", "adquisición de acciones",
     "ofertas públicas", "opa sobre", "adquisición obligatoria", "compra de acciones"
 ]
 
-# Frases a excluir (falsos positivos comunes)
+# Frases a excluir (falsos positivos)
 EXCLUDE_PATTERNS = [
     "remain vulnerable", "treacherous calm", "trendzicht", "trend monitor", "trend monitor 2026",
     "financial markets remain", "mercados financieros permanecen", "permanecen inalterados",
     "markets remain", "vulnerable", "geopolitical tensions", "hyper-personalisation"
 ]
 
+# Lista ampliada de RSS feeds (España + Europa + globales con foco mercados)
 RSS_FEEDS = [
-    "https://www.cnmv.es/portal/RSS/RssHandler.ashx?fac=HECHOSRELEV",
-    "https://www.bolsamadrid.es/rss/RSS.ashx?feed=Todo",
-    "https://www.expansion.com/rss/mercados.xml",
-    "https://www.cincodias.com/rss/mercados",
-    # ... resto de feeds internacionales ...
+    # España - CNMV (el más importante para OPAs oficiales)
+    "https://www.cnmv.es/portal/Otra-Informacion-Relevante/RSS.asmx/GetNoticiasCNMV",  # Otra Información Relevante (OIR) - clave para autorizaciones OPA
+    "https://www.cnmv.es/portal/RSS/RssHandler.ashx?fac=HECHOSRELEV",               # Hechos Relevantes (prueba, aunque a veces falla)
+
+    # España - Medios y bolsas
+    "https://www.expansion.com/rss/mercados.xml",                                  # Expansión Mercados
+    "https://www.cincodias.com/rss/mercados",                                      # Cinco Días Mercados
+    "http://www.eleconomista.es/rss/rss-mercados.php",                             # El Economista Mercados (del RSS oficial)
+    "https://www.bolsasymercados.es/bme-exchange/es/RSS/Regulacion",               # BME Regulación (puede capturar OPAs/reglas)
+    "https://www.bolsasymercados.es/MTF_Equity/esp/RSS/Boletin.ashx",              # BME Boletín diario general (noticias bursátiles)
+
+    # Francia
+    "https://services.lesechos.fr/rss/les-echos-finance-marches.xml",              # Les Echos Finance & Marchés
+
+    # Italia
+    "https://www.ilsole24ore.com/rss/finanza.xml",                                 # Il Sole 24 Ore Finanza
+    "https://www.ilsole24ore.com/rss/finanza--quotate-italia.xml",                 # Quotate Italia (cotizadas)
+
+    # Reino Unido
+    "https://www.ft.com/markets?format=rss",                                       # Financial Times Markets
+
+    # Alemania
+    "https://www.handelsblatt.com/contentexport/feed/finanzen",                    # Handelsblatt Finanzen
+
+    # Pan-europeos / globales
+    "https://es.investing.com/rss/news.rss",                                       # Investing.com Noticias (en español)
+    "https://www.euronext.com/en/rss",                                             # Euronext (bolsas FR, NL, BE, etc.)
 ]
 
 def normalize_url(url):
@@ -71,7 +94,7 @@ def send_telegram(msg, is_suspect=False):
     if not BOT_TOKEN or not CHAT_ID:
         print("Error: BOT_TOKEN o CHAT_ID no configurados.")
         return
-    prefix = "⚠️ *Posible OPA – revisar manualmente*" if is_suspect else "🚨 *¡OPA Detectada!*"
+    prefix = "⚠️ *Posible OPA – revisar*" if is_suspect else "🚨 *¡OPA Detectada!*"
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
@@ -88,21 +111,19 @@ def send_telegram(msg, is_suspect=False):
 
 def is_opa(text):
     text_lower = text.lower()
-    
-    # Excluir falsos positivos
     if any(pattern in text_lower for pattern in EXCLUDE_PATTERNS):
-        print(f"Excluido por patrón: {text_lower[:100]}...")
+        print(f"Excluido: {text_lower[:100]}...")
         return False, False
     
     has_strong = any(kw.lower() in text_lower for kw in STRONG_KEYWORDS)
     has_secondary = any(kw.lower() in text_lower for kw in SECONDARY_KEYWORDS)
     
     if has_strong:
-        print(f"OPA fuerte detectada: {text_lower[:100]}...")
+        print(f"OPA fuerte: {text_lower[:100]}...")
         return True, False
     elif has_secondary:
-        print(f"OPA secundaria/sospechosa: {text_lower[:100]}...")
-        return True, True  # True = OPA, True = es sospechosa (enviar con aviso)
+        print(f"OPA sospechosa: {text_lower[:100]}...")
+        return True, True
     else:
         print(f"No OPA: {text_lower[:100]}...")
         return False, False
@@ -155,100 +176,12 @@ def check_rss():
             print(f"Error en {feed_url}: {e}")
     
     save_seen(seen)
-    return new_alerts, seen  # devolvemos seen para usarlo en OIR
+    return new_alerts, seen
 
-def check_oir_page():
-    url = "https://www.cnmv.es/portal/otra-informacion-relevante/aldia-oir?lang=es"
-    headers = {"User-Agent": "OPA-Bot/1.0 +https://github.com/elpa82-dev/opa-alerts-bot"}
-    
-    try:
-        resp = requests.get(url, headers=headers, timeout=15)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
-        
-        # Extraemos todo el texto visible y lo dividimos en líneas
-        text_content = soup.get_text(separator="\n", strip=True)
-        lines = [line.strip() for line in text_content.split("\n") if line.strip()]
-        
-        seen = load_seen()
-        current_date = ""
-        i = 0
-        
-        while i < len(lines):
-            line = lines[i]
-            
-            # Detectar fecha (## DD/MM/YYYY o similar)
-            if re.match(r'^##?\s*\d{2}/\d{2}/\d{4}', line):
-                current_date = line.strip('# ').strip()
-                i += 1
-                continue
-            
-            # Buscar líneas que empiecen con hora: * * HH:MM
-            hora_match = re.match(r'^\*\s*\*\s*(\d{2}:\d{2})', line)
-            if hora_match:
-                hora = hora_match.group(1)
-                
-                # Siguiente línea suele ser emisor [Nombre](url)
-                i += 1
-                if i >= len(lines): break
-                emisor_line = lines[i]
-                emisor_match = re.search(r'\[([^\]]+)\]', emisor_line)
-                emisor = emisor_match.group(1).strip() if emisor_match else ""
-                
-                # Tipo (siguiente texto plano)
-                i += 1
-                if i >= len(lines): break
-                tipo = lines[i].strip()
-                
-                # Detalle / título: siguiente línea con [Texto](url)
-                i += 1
-                if i >= len(lines): break
-                detalle_line = lines[i]
-                titulo_match = re.search(r'\[([^\]]+)\]', detalle_line)
-                titulo = titulo_match.group(1).strip() if titulo_match else ""
-                
-                link_match = re.search(r'\((https?://[^\)]+)\)', detalle_line)
-                link = link_match.group(1) if link_match else ""
-                
-                combined_text = f"{current_date} {hora} {emisor} {tipo} {titulo}"
-                if len(combined_text.strip()) < 30: 
-                    i += 1
-                    continue
-                
-                uid = hashlib.md5((link + titulo).encode('utf-8')).hexdigest()
-                if uid in seen: 
-                    i += 1
-                    continue
-                
-                is_detected, is_suspect = is_opa(combined_text)
-                if is_detected:
-                    msg = (
-                        f"**Fecha:** {current_date}\n"
-                        f"**Hora:** {hora}\n"
-                        f"**Emisor:** {emisor}\n"
-                        f"**Tipo:** {tipo}\n"
-                        f"**Detalle:** {titulo}\n"
-                        f"**Fuente:** CNMV OIR\n"
-                        f"**Alerta:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
-                        f"[Ver documento]({link})"
-                    )
-                    send_telegram(msg, is_suspect)
-                    seen.add(uid)
-                    print(f"OPA enviada: {titulo[:80]}...")
-                
-                # Saltamos líneas procesadas
-                i += 1
-                continue
-            
-            i += 1
-        
-        save_seen(seen)
-        print("Scraping OIR completado. Líneas procesadas:", len(lines))
-    except Exception as e:
-        print(f"Error scraping OIR: {e}")
+# ... (aquí mantén tu función check_oir_page() actualizada con la versión robusta que te di antes, la de líneas con regex para markdown)
 
 if __name__ == "__main__":
     print("Iniciando chequeo completo...")
     alerts_rss, _ = check_rss()
-    check_oir_page()  # ejecutamos después del RSS
+    check_oir_page()  # Mantén esta llamada para el scraping de la página OIR
     print(f"Finalizado. Alertas nuevas totales: {alerts_rss} (más posibles de OIR)")
