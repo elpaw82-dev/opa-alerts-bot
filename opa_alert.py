@@ -166,56 +166,84 @@ def check_oir_page():
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
         
-        # Buscamos los <li> dentro de la lista de anuncios
-        items = soup.select("ul li")  # o más específico: "div.oir-list ul li" si ves la clase
+        # Extraemos todo el texto visible y lo dividimos en líneas
+        text_content = soup.get_text(separator="\n", strip=True)
+        lines = [line.strip() for line in text_content.split("\n") if line.strip()]
         
         seen = load_seen()
+        current_date = ""
+        i = 0
         
-        today = datetime.now().strftime('%d/%m/%Y')  # para filtrar solo hoy, pero opcional
-        
-        for item in items[:15]:  # últimos 15 para cubrir cierre anterior
-            # Extraer hora
-            hora_tag = item.find("span", class_="hora")
-            hora = hora_tag.get_text(strip=True) if hora_tag else "??:??"
+        while i < len(lines):
+            line = lines[i]
             
-            # Emisor (primer <a class="emisor">)
-            emisor_tag = item.find("a", class_="emisor")
-            emisor = emisor_tag.get_text(strip=True).strip("[]") if emisor_tag else ""
+            # Detectar fecha (## DD/MM/YYYY o similar)
+            if re.match(r'^##?\s*\d{2}/\d{2}/\d{4}', line):
+                current_date = line.strip('# ').strip()
+                i += 1
+                continue
             
-            # Tipo / título genérico
-            tipo_tag = item.find("span", class_="tipo")
-            tipo = tipo_tag.get_text(strip=True) if tipo_tag else ""
+            # Buscar líneas que empiecen con hora: * * HH:MM
+            hora_match = re.match(r'^\*\s*\*\s*(\d{2}:\d{2})', line)
+            if hora_match:
+                hora = hora_match.group(1)
+                
+                # Siguiente línea suele ser emisor [Nombre](url)
+                i += 1
+                if i >= len(lines): break
+                emisor_line = lines[i]
+                emisor_match = re.search(r'\[([^\]]+)\]', emisor_line)
+                emisor = emisor_match.group(1).strip() if emisor_match else ""
+                
+                # Tipo (siguiente texto plano)
+                i += 1
+                if i >= len(lines): break
+                tipo = lines[i].strip()
+                
+                # Detalle / título: siguiente línea con [Texto](url)
+                i += 1
+                if i >= len(lines): break
+                detalle_line = lines[i]
+                titulo_match = re.search(r'\[([^\]]+)\]', detalle_line)
+                titulo = titulo_match.group(1).strip() if titulo_match else ""
+                
+                link_match = re.search(r'\((https?://[^\)]+)\)', detalle_line)
+                link = link_match.group(1) if link_match else ""
+                
+                combined_text = f"{current_date} {hora} {emisor} {tipo} {titulo}"
+                if len(combined_text.strip()) < 30: 
+                    i += 1
+                    continue
+                
+                uid = hashlib.md5((link + titulo).encode('utf-8')).hexdigest()
+                if uid in seen: 
+                    i += 1
+                    continue
+                
+                is_detected, is_suspect = is_opa(combined_text)
+                if is_detected:
+                    msg = (
+                        f"**Fecha:** {current_date}\n"
+                        f"**Hora:** {hora}\n"
+                        f"**Emisor:** {emisor}\n"
+                        f"**Tipo:** {tipo}\n"
+                        f"**Detalle:** {titulo}\n"
+                        f"**Fuente:** CNMV OIR\n"
+                        f"**Alerta:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+                        f"[Ver documento]({link})"
+                    )
+                    send_telegram(msg, is_suspect)
+                    seen.add(uid)
+                    print(f"OPA enviada: {titulo[:80]}...")
+                
+                # Saltamos líneas procesadas
+                i += 1
+                continue
             
-            # Detalle / texto real (segundo <a class="detalle">)
-            detalle_tag = item.find("a", class_="detalle")
-            titulo = detalle_tag.get_text(strip=True).strip("[]") if detalle_tag else ""
-            link = detalle_tag["href"] if detalle_tag and "href" in detalle_tag.attrs else ""
-            if link and not link.startswith("http"):
-                link = "https://www.cnmv.es" + link
-            
-            combined_text = f"{hora} {emisor} {tipo} {titulo}"
-            if len(combined_text.strip()) < 20: continue
-            
-            uid = hashlib.md5((link + titulo).encode('utf-8')).hexdigest()
-            if uid in seen: continue
-            
-            is_detected, is_suspect = is_opa(combined_text)
-            if is_detected:
-                msg = (
-                    f"**Hora:** {hora}\n"
-                    f"**Emisor:** {emisor}\n"
-                    f"**Tipo:** {tipo}\n"
-                    f"**Título/Detalle:** {titulo}\n"
-                    f"**Fuente:** CNMV OIR\n"
-                    f"**Alerta:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
-                    f"[Ver documento]({link})"
-                )
-                send_telegram(msg, is_suspect)
-                seen.add(uid)
-                print(f"Detectado y enviado: {titulo[:80]}...")
+            i += 1
         
         save_seen(seen)
-        print("Scraping OIR completado. Items procesados:", len(items))
+        print("Scraping OIR completado. Líneas procesadas:", len(lines))
     except Exception as e:
         print(f"Error scraping OIR: {e}")
 
